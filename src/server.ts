@@ -2,10 +2,13 @@ import express, { Request, Response } from 'express';
 import axios, { AxiosError } from 'axios';
 import { DEMO_API_KEY } from './config/constants';
 import { ApiResponse, FilterClauseType, FormResponse, Question, RequestParameters } from './config/types';
-import { formResponses } from './data/responses';
 
 const app = express();
 const port = process.env.PORT || 3000;
+
+app.get('/', (req: Request, res: Response) => {
+  res.json({ message: 'Hello world!' });
+});
 
 app.get('/:formId/filteredResponses', async (req: Request, res: Response) => {
   const { formId } = req.params;
@@ -54,6 +57,7 @@ app.get('/:formId/filteredResponses', async (req: Request, res: Response) => {
     });
 
     let filteredResponses: FormResponse[] = apiRes.data.responses;
+
     if (filters) {
       let parsedFilters: FilterClauseType[];
 
@@ -96,9 +100,21 @@ function matchCondition(value: string, filter: FilterClauseType): boolean {
     case 'does_not_equal':
       return value != filter.value;
     case 'greater_than':
-      return new Date(value) > new Date(filter.value);
+      if (typeof value === 'number' || typeof filter.value === 'number') {
+        return value > filter.value;
+      } else if (!isNaN(Date.parse(value)) && !isNaN(Date.parse(filter.value))) {
+        return new Date(value) > new Date(filter.value);
+      } else {
+        return value > filter.value;
+      }
     case 'less_than':
-      return new Date(value) < new Date(filter.value);
+      if (typeof value === 'number' || typeof filter.value === 'number') {
+        return value < filter.value;
+      } else if (!isNaN(Date.parse(value)) && !isNaN(Date.parse(filter.value))) {
+        return new Date(value) < new Date(filter.value);
+      } else {
+        return value < filter.value;
+      }
     default:
       return false;
   }

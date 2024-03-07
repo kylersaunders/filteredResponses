@@ -18,6 +18,7 @@
   "scripts": {
     "start": "tsc && node build/server.js",
     "dev": "nodemon",
-    "test": "jest"
+    "test": "jest",
+    "postman": "node __test__/testScript.js"
   }
 }
