@@ -19,6 +19,5 @@
     "start": "tsc && node build/server.js",
     "dev": "nodemon",
     "test": "jest"
-  },
-  "type": "module"
+  }
 }

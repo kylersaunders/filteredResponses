@@ -20,7 +20,8 @@ export interface RequestParameters {
 }
 
 // Response Type
-type QuestionType = 'ShortAnswer' | 'EmailInput'; // Add other question types as needed
+// would add exhaustive list of question types here & disregard undefined types per docs
+type QuestionType = string;
 type CalculationType = 'number' | 'text';
 
 export interface Question {

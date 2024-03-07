@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import axios, { AxiosError } from 'axios';
 import { DEMO_API_KEY } from './config/constants';
 import { ApiResponse, FilterClauseType, FormResponse, Question, RequestParameters } from './config/types';
+import { formResponses } from './data/responses';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -23,7 +24,7 @@ app.get('/:formId/filteredResponses', async (req: Request, res: Response) => {
   }
 
   // Validation for date parameters
-  const dateFormat = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/; // Regex to validate date format
+  const dateFormat = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/;
   if (afterDate && !dateFormat.test(afterDate as string)) {
     return res.status(400).json({ message: 'afterDate must be in YYYY-MM-DDTHH:mm:ss.sssZ format.' });
   }
@@ -46,19 +47,32 @@ app.get('/:formId/filteredResponses', async (req: Request, res: Response) => {
     sort,
   };
 
-  // console.log(params, filters);
-
   try {
-    // const apiRes = await axios.get(`https://api.fillout.com/v1/api/forms/${formId}/submissions`, {
-    //   headers: { Authorization: `Bearer ${DEMO_API_KEY}` },
-    //   params,
-    // });
+    const apiRes = await axios.get(`https://api.fillout.com/v1/api/forms/${formId}/submissions`, {
+      headers: { Authorization: `Bearer ${DEMO_API_KEY}` },
+      params,
+    });
 
-    // let filteredResponses: FormResponse[] = apiRes.data.responses;
-    // @ts-ignore
-    let filteredResponses: FormResponse[] = [];
+    let filteredResponses: FormResponse[] = apiRes.data.responses;
     if (filters) {
-      const parsedFilters: FilterClauseType[] = JSON.parse(filters);
+      let parsedFilters: FilterClauseType[];
+
+      try {
+        parsedFilters = JSON.parse(filters);
+      } catch (error) {
+        return res.status(400).json({ message: 'Filters must be a valid JSON of the types shown in the API docs.' });
+      }
+
+      if (!Array.isArray(parsedFilters)) {
+        return res.status(400).json({ message: 'Filters must be an array of the types shown in the API docs.' });
+      }
+      if (parsedFilters.some((filter: FilterClauseType) => !filter.id || !filter.condition || !filter.value)) {
+        return res.status(400).json({ message: 'Filters must contain question id, condition and value.' });
+      }
+      if (parsedFilters.some((filter: FilterClauseType) => !['equals', 'does_not_equal', 'greater_than', 'less_than'].includes(filter.condition))) {
+        return res.status(400).json({ message: 'Condition must be one of equals, does_not_equal, greater_than, less_than.' });
+      }
+
       filteredResponses = filteredResponses.filter((response: FormResponse) =>
         parsedFilters.every((filter) => response.questions.some((question: Question) => question.id === filter.id && matchCondition(question.value, filter)))
       );
@@ -90,8 +104,9 @@ function matchCondition(value: string, filter: FilterClauseType): boolean {
   }
 }
 
-app.listen(port, () => {
+// to let jest close the instance
+const server = app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 });
 
-export default app;
+module.exports = server;
